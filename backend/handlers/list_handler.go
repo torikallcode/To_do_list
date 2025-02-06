@@ -41,3 +41,25 @@ func CreateList(w http.ResponseWriter, r *http.Request) {
 	lists = append(lists, list)
 	json.NewEncoder(w).Encode(list)
 }
+
+func UpdateList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "invalid user", http.StatusBadRequest)
+		return
+	}
+	for index, item := range lists {
+		if item.ID == id {
+			lists = append(lists[:index], lists[index+1:]...)
+			var list models.List
+			item.ID = id
+			_ = json.NewDecoder(r.Body).Decode(&list)
+			lists = append(lists, list)
+			json.NewEncoder(w).Encode(list)
+			return
+		}
+	}
+	http.Error(w, "user not found", http.StatusNotFound)
+}
