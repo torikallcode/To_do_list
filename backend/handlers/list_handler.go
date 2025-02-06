@@ -32,3 +32,12 @@ func GetList(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, "user not found", http.StatusNotFound)
 }
+
+func CreateList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var list models.List
+	json.NewDecoder(r.Body).Decode(&list)
+	list.ID = len(lists) + 1
+	lists = append(lists, list)
+	json.NewEncoder(w).Encode(list)
+}
