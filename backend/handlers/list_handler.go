@@ -63,3 +63,21 @@ func UpdateList(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, "user not found", http.StatusNotFound)
 }
+
+func DeleteList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "invalid user", http.StatusBadRequest)
+		return
+	}
+	for index, item := range lists {
+		if item.ID == id {
+			lists = append(lists[:index], lists[index:+1]...)
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
+	http.Error(w, "user not found", http.StatusNotFound)
+}
