@@ -5,7 +5,7 @@ export const Home = () => {
   const [list, setList] = useState([]); // Pastikan ini adalah array
   const [input, setInput] = useState('');
   const [edit, setEdit] = useState(false);
-  const [id, setId] = useState(0);
+  const [id, setId] = useState(null);
 
   const api = axios.create({
     baseURL: 'http://localhost:8080', // Perbaiki typo
@@ -60,12 +60,27 @@ export const Home = () => {
     e.preventDefault();
     try {
       const response = await api.put(`/list/${id}`, { name_list: input }); // Pastikan format data sesuai
-      setList(list.map(item => (item.id === id ? response.data : item)));
+      setList(list.map(item => item.id === id ? response.data : item));
       setInput('');
       setEdit(false);
-      setId(id)
+      setId(null)
     } catch (error) {
       console.log('Error fetching data', error);
+    }
+  };
+
+  const handleToggleStatus = async (itemId) => {
+    try {
+      const response = await api.patch(`/list/${itemId}/status`);
+
+      // Update list dengan status baru
+      setList(list.map(item =>
+        item.id === itemId
+          ? { ...item, status: response.data.status }
+          : item
+      ));
+    } catch (error) {
+      console.error('Error toggling status', error);
     }
   };
 
@@ -96,10 +111,32 @@ export const Home = () => {
           </button>
         </form>
         <ul>
-          {Array.isArray(list) && list.map((item) => ( // Pastikan list adalah array sebelum memetakan
-            <li key={item.id} className='flex w-full justify-between space-x-5 items-center bg-sky-900 rounded-md py-2 px-3'>
-              <span className='text-green-300'>selesai</span>
-              <span className='overflow-hidden whitespace-nowrap text-ellipsis max-w-xs text-white'>{item.name_list}</span>
+          {Array.isArray(list) && list.map((item) => (
+            <li
+              key={item.id}
+              className={`
+                flex w-full justify-between space-x-5 items-center 
+                rounded-md py-2 px-3 
+                ${item.status ? 'bg-green-600' : 'bg-sky-900'}
+              `}
+            >
+              {/* Tambahkan checkbox */}
+              <input
+                type="checkbox"
+                checked={item.status}
+                onChange={() => handleToggleStatus(item.id)}
+                className="form-checkbox h-5 w-5 text-green-500"
+              />
+
+              <span
+                className={`
+                  overflow-hidden whitespace-nowrap text-ellipsis max-w-xs 
+                  ${item.status ? 'line-through text-gray-300' : 'text-white'}
+                `}
+              >
+                {item.name_list}
+              </span>
+
               <div className='flex space-x-2'>
                 <button
                   className="inline-flex items-center justify-center px-3 py-2 font-sans text-white bg-sky-500 rounded-lg cursor-pointer"
