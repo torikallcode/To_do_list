@@ -1,28 +1,37 @@
 package handlers
 
 import (
+	"backend/database"
 	"backend/models"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"sync"
 
 	"github.com/gorilla/mux"
 )
 
-// Gunakan mutex untuk thread-safety
-var (
-	lists = []models.List{
-		{ID: 1, Name_list: "Program", Status: true},
-	}
-	mu     sync.Mutex
-	nextID = 2 // Mulai dari 2 karena sudah ada item dengan ID 1
-)
-
 func GetAllList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	mu.Lock()
-	defer mu.Unlock()
+
+	query := "SELECT id, name_list, status FROM lists"
+	rows, err := database.DB.Query(query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var lists []models.List
+	for rows.Next() {
+		var list models.List
+		if err := rows.Scan(&list.ID, &list.Name_list, &list.Status); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		lists = append(lists, list)
+	}
+
 	json.NewEncoder(w).Encode(lists)
 }
 
@@ -35,15 +44,18 @@ func GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-	for _, item := range lists {
-		if item.ID == id {
-			json.NewEncoder(w).Encode(item)
-			return
-		}
+	var list models.List
+	query := "SELECT id, name_list, status FROM lists WHERE id = ?"
+	err = database.DB.QueryRow(query, id).Scan(&list.ID, &list.Name_list, &list.Status)
+	if err == sql.ErrNoRows {
+		http.Error(w, "list not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	http.Error(w, "list not found", http.StatusNotFound)
+
+	json.NewEncoder(w).Encode(list)
 }
 
 func CreateList(w http.ResponseWriter, r *http.Request) {
@@ -55,14 +67,16 @@ func CreateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
+	query := "INSERT INTO lists (name_list, status) VALUES (?, ?)"
+	result, err := database.DB.Exec(query, list.Name_list, list.Status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	// Gunakan nextID untuk memastikan ID unik
-	list.ID = nextID
-	nextID++
+	id, _ := result.LastInsertId()
+	list.ID = int(id)
 
-	lists = append(lists, list)
 	json.NewEncoder(w).Encode(list)
 }
 
@@ -75,28 +89,21 @@ func UpdateList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	for index, item := range lists {
-		if item.ID == id {
-			var updatedList models.List
-			if err := json.NewDecoder(r.Body).Decode(&updatedList); err != nil {
-				http.Error(w, "invalid input", http.StatusBadRequest)
-				return
-			}
-
-			// Pertahankan ID asli
-			updatedList.ID = id
-
-			// Ganti item di slice
-			lists[index] = updatedList
-
-			json.NewEncoder(w).Encode(updatedList)
-			return
-		}
+	var updatedList models.List
+	if err := json.NewDecoder(r.Body).Decode(&updatedList); err != nil {
+		http.Error(w, "invalid input", http.StatusBadRequest)
+		return
 	}
-	http.Error(w, "list not found", http.StatusNotFound)
+
+	query := "UPDATE lists SET name_list = ?, status = ? WHERE id = ?"
+	_, err = database.DB.Exec(query, updatedList.Name_list, updatedList.Status, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	updatedList.ID = id
+	json.NewEncoder(w).Encode(updatedList)
 }
 
 func DeleteList(w http.ResponseWriter, r *http.Request) {
@@ -108,18 +115,20 @@ func DeleteList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	for index, item := range lists {
-		if item.ID == id {
-			// Gunakan metode slice yang benar untuk menghapus
-			lists = append(lists[:index], lists[index+1:]...)
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	query := "DELETE FROM lists WHERE id = ?"
+	result, err := database.DB.Exec(query, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	http.Error(w, "list not found", http.StatusNotFound)
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "list not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
@@ -131,15 +140,27 @@ func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	for index, item := range lists {
-		if item.ID == id {
-			lists[index].Status = !item.Status
-			json.NewEncoder(w).Encode(lists[index])
-			return
-		}
+	query := "UPDATE lists SET status = NOT status WHERE id = ?"
+	result, err := database.DB.Exec(query, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	http.Error(w, "list not found", http.StatusNotFound)
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "list not found", http.StatusNotFound)
+		return
+	}
+
+	// Ambil data terbaru setelah update
+	var updatedList models.List
+	selectQuery := "SELECT id, name_list, status FROM lists WHERE id = ?"
+	err = database.DB.QueryRow(selectQuery, id).Scan(&updatedList.ID, &updatedList.Name_list, &updatedList.Status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(updatedList)
 }
