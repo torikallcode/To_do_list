@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/database"
 	"backend/routers"
 	"log"
 	"net/http"
@@ -9,6 +10,10 @@ import (
 )
 
 func main() {
+
+	database.InitDatabase()
+	defer database.DB.Close()
+
 	router := routers.SetupRouter()
 
 	c := cors.New(cors.Options{
