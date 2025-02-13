@@ -104,3 +104,38 @@ func CreateList(w http.ResponseWriter, r *http.Request) {
 	// ubah dalam format json dan kirim sebagai response
 	json.NewEncoder(w).Encode(list)
 }
+
+func UpdateList(w http.ResponseWriter, r *http.Request) {
+	// set header sebagai json
+	w.Header().Set("Content-Type", "application/json")
+	// ambil parameter url (id)
+	params := mux.Vars(r)
+	// konversi id ke int
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid list", http.StatusBadRequest)
+		return
+	}
+
+	// buat variable untuk menampung data yang di decode
+	var UpdateList models.List
+	// decode data
+	if err := json.NewDecoder(r.Body).Decode(&UpdateList); err != nil {
+		http.Error(w, "Invalid list", http.StatusBadRequest)
+		return
+	}
+
+	// buat kode query untuk update data yang akan diupdate
+	query := "UPDATE list SET name_list = ?, status = ?, id = ?"
+	//mengeksekusi query dengan parameter yang digunakan
+	_, err = database.DB.Exec(query, UpdateList.Name_list, UpdateList.Status, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// memberika id terbaru pada update list
+	UpdateList.ID = id
+	// mengubah updatelist ke dalam json dann mengirimnya sebagai response
+	json.NewEncoder(w).Encode(UpdateList)
+}
