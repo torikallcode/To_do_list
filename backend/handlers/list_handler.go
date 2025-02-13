@@ -3,8 +3,12 @@ package handlers
 import (
 	"backend/database"
 	"backend/models"
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 var lists []models.List
@@ -39,4 +43,33 @@ func GetAllList(w http.ResponseWriter, r *http.Request) {
 	}
 	// ubah format slice licsts ke json dan kirim sebagai response
 	json.NewEncoder(w).Encode(lists)
+}
+
+func GetList(w http.ResponseWriter, r *http.Request) {
+	// Set header sebagi json
+	w.Header().Set("Content-Type", "application/json")
+	// ambil parameter url (id)
+	params := mux.Vars(r)
+	// konversi id ke int
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "invalid list", http.StatusBadRequest)
+		return
+	}
+
+	// buat variable sebelum menyimpan list
+	var list models.List
+	// buat kode query yang akan di eksekusi di sql untuk mengambil data dari tabel list
+	query := "SELECT id, name_list, status FROM list WHERE id = ?"
+	// (QueryRow = mengambil 1 baris hasil), ()
+	err = database.DB.QueryRow(query, id).Scan(&list.ID, &list.Name_list, &list.Status)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Rows not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// ubah format list ke json dan kirim sebagai response
+	json.NewEncoder(w).Encode(list)
 }
