@@ -73,3 +73,34 @@ func GetList(w http.ResponseWriter, r *http.Request) {
 	// ubah format list ke json dan kirim sebagai response
 	json.NewEncoder(w).Encode(list)
 }
+
+func CreateList(w http.ResponseWriter, r *http.Request) {
+	// set header dalam format json
+	w.Header().Set("Content-Type", "application/json")
+	// buat variable untuk menyimpan data yang di decode
+	var list models.List
+	// decode body
+	if err := json.NewDecoder(r.Body).Decode(&list); err != nil {
+		http.Error(w, "invalid list", http.StatusNotFound)
+		return
+	}
+
+	// buat kode query untuk memasukkan data baru ke tabel list
+	query := "INSERT INTO lists (name_list, status) VALUE (?, ?)"
+	// mengeksekusi query dengan parameter yang digunakan
+	result, err := database.DB.Exec(query, list.Name_list, list.Status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// mengembalika ID dari baris yang baru saja dimasukkan
+	id, err := result.LastInsertId()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// menyimpan id yang dimasukkan ke database tadi ke list.id
+	list.ID = int(id)
+	// ubah dalam format json dan kirim sebagai response
+	json.NewEncoder(w).Encode(list)
+}
