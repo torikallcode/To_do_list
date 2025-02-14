@@ -164,3 +164,36 @@ func DeleteList(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent) // jika query berhasil dan data berhasil dihapus maka akan mengirim response (204 no content)
 }
+
+func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "invalid list", http.StatusBadRequest)
+		return
+	}
+
+	query := "UPDATE lists SET status = NOT status WHERE id = ?"
+	result, err := database.DB.Exec(query, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "list not found", http.StatusNotFound)
+		return
+	}
+
+	var updateList models.List
+	selectQuery := "SELECT id, name_list, status FROM list WHERE id = ?"
+	err = database.DB.QueryRow(selectQuery, id).Scan(&updateList.ID, &updateList.Name_list, &updateList.Status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(updateList)
+}
