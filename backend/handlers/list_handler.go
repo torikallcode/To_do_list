@@ -139,3 +139,28 @@ func UpdateList(w http.ResponseWriter, r *http.Request) {
 	// mengubah updatelist ke dalam json dann mengirimnya sebagai response
 	json.NewEncoder(w).Encode(UpdateList)
 }
+
+func DeleteList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json") //set header sebagai json
+	params := mux.Vars(r)                              // ambil parameter(id) dari url
+	id, err := strconv.Atoi(params["id"])              // konversi id ke int
+	if err != nil {
+		http.Error(w, "invalid list", http.StatusBadRequest)
+		return
+	}
+
+	query := "DELETE FROM lists WHERE id = ?"  // kode query untuk menghapus data dari tabel list berdasarkan id
+	result, err := database.DB.Exec(query, id) // mengeksekusi query sql dengan parameter id
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected() //(result.RowsAffected()) method yang digunakan untuk mengembalika jumlah baris yang terpengaruh oleh query
+	if rowsAffected == 0 {
+		http.Error(w, "list not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent) // jika query berhasil dan data berhasil dihapus maka akan mengirim response (204 no content)
+}
