@@ -11,14 +11,14 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var lists []models.List
-
 func GetAllList(w http.ResponseWriter, r *http.Request) {
 	// set header response sebaga json
 	w.Header().Set("Content-Type", "application/json")
 
+	var lists []models.List
+
 	// membuat kode query yang akan dieksekusi
-	query := "SELECT id, name_list, status FROM list"
+	query := "SELECT id, name_list, status FROM lists"
 
 	// digunakan untuk mengeksekusi query ke database. (database.DB adalah tempat koneksi databasenya)
 	rows, err := database.DB.Query(query)
@@ -60,7 +60,7 @@ func GetList(w http.ResponseWriter, r *http.Request) {
 	// buat variable sebelum menyimpan list
 	var list models.List
 	// buat kode query yang akan di eksekusi di sql untuk mengambil data dari tabel list
-	query := "SELECT id, name_list, status FROM list WHERE id = ?"
+	query := "SELECT id, name_list, status FROM lists WHERE id = ?"
 	// (QueryRow = mengambil 1 baris hasil), ()
 	err = database.DB.QueryRow(query, id).Scan(&list.ID, &list.Name_list, &list.Status)
 	if err == sql.ErrNoRows {
@@ -81,7 +81,7 @@ func CreateList(w http.ResponseWriter, r *http.Request) {
 	var list models.List
 	// decode body
 	if err := json.NewDecoder(r.Body).Decode(&list); err != nil {
-		http.Error(w, "invalid list", http.StatusNotFound)
+		http.Error(w, "invalid input", http.StatusBadRequest)
 		return
 	}
 
@@ -126,7 +126,7 @@ func UpdateList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// buat kode query untuk update data yang akan diupdate
-	query := "UPDATE list SET name_list = ?, status = ?, id = ?"
+	query := "UPDATE lists SET name_list = ?, status = ? WHERE id = ?"
 	//mengeksekusi query dengan parameter yang digunakan
 	_, err = database.DB.Exec(query, UpdateList.Name_list, UpdateList.Status, id)
 	if err != nil {
@@ -188,7 +188,7 @@ func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var updateList models.List
-	selectQuery := "SELECT id, name_list, status FROM list WHERE id = ?"
+	selectQuery := "SELECT id, name_list, status FROM lists WHERE id = ?"
 	err = database.DB.QueryRow(selectQuery, id).Scan(&updateList.ID, &updateList.Name_list, &updateList.Status)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
