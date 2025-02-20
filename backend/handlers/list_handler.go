@@ -175,7 +175,6 @@ func DeleteList(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
-
 	// Set header response sebagai JSON
 	// Ambil parameter ID dari URL
 	// Konversi ID dari string ke integer
@@ -183,5 +182,36 @@ func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
 	// Validasi perubahan data
 	// Ambil data terbaru setelah update
 	// Kirim data list yang diupdate sebagai response
+
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "invalid list", http.StatusBadRequest)
+		return
+	}
+
+	query := "UPDATE lists SET status = NOT status WHERE id = ?"
+	result, err := database.DB.Exec(query, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		http.Error(w, "rows not found", http.StatusNotFound)
+		return
+	}
+
+	var list models.List
+	newQuery := "SELECT id, name_list, status FROM list WHERE id = ?"
+	err = database.DB.QueryRow(newQuery, id).Scan(&list.ID, &list.Name_list, &list.Status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(list)
 
 }
