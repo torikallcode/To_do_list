@@ -22,7 +22,7 @@ func GetAllList(w http.ResponseWriter, r *http.Request) {
 
 	var lists []models.List
 
-	query := "SELECT id, name_list, status FROM lists"
+	query := "SELECT id, name_list, status FROM list"
 	rows, err := database.DB.Query(query)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -31,42 +31,46 @@ func GetAllList(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var list models.List
+
 		if err := rows.Scan(&list.ID, &list.Name_list, &list.Status); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		lists = append(lists, list)
 	}
+
 	json.NewEncoder(w).Encode(lists)
 }
 
 func GetList(w http.ResponseWriter, r *http.Request) {
 
-	// Set header sebagi json
+	// 	Set header response sebagai JSON
+	// Ambil parameter ID dari URL
+	// Konversi ID dari string ke integer
+	// Eksekusi query SELECT untuk mengambil data spesifik
+	// Memindahkan data ke variabel list
+	// Mengirim data list sebagai JSON response
+
 	w.Header().Set("Content-Type", "application/json")
-	// ambil parameter url (id)
 	params := mux.Vars(r)
-	// konversi id ke int
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, "invalid list", http.StatusBadRequest)
+		http.Error(w, "Invalid list", http.StatusBadRequest)
 		return
 	}
 
-	// buat variable sebelum menyimpan list
 	var list models.List
-	// buat kode query yang akan di eksekusi di sql untuk mengambil data dari tabel list
 	query := "SELECT id, name_list, status FROM lists WHERE id = ?"
-	// (QueryRow = mengambil 1 baris hasil), ()
 	err = database.DB.QueryRow(query, id).Scan(&list.ID, &list.Name_list, &list.Status)
 	if err == sql.ErrNoRows {
-		http.Error(w, "Rows not found", http.StatusNotFound)
+		http.Error(w, "rows not found", http.StatusNotFound)
 		return
 	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// ubah format list ke json dan kirim sebagai response
+
 	json.NewEncoder(w).Encode(list)
 }
 
