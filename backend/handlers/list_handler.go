@@ -143,31 +143,13 @@ func UpdateList(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteList(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json") //set header sebagai json
-	params := mux.Vars(r)                              // ambil parameter(id) dari url
-	id, err := strconv.Atoi(params["id"])              // konversi id ke int
-	if err != nil {
-		http.Error(w, "invalid list", http.StatusBadRequest)
-		return
-	}
+	// Set header response sebagai JSON
+	// Ambil parameter ID dari URL
+	// Konversi ID dari string ke integer
+	// Eksekusi query DELETE ke database
+	// Periksa jumlah baris yang terpengaruh
+	// Kirim response sesuai hasil operasi
 
-	query := "DELETE FROM lists WHERE id = ?"  // kode query untuk menghapus data dari tabel list berdasarkan id
-	result, err := database.DB.Exec(query, id) // mengeksekusi query sql dengan parameter id
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	rowsAffected, _ := result.RowsAffected() //(result.RowsAffected()) method yang digunakan untuk mengembalika jumlah baris yang terpengaruh oleh query
-	if rowsAffected == 0 {
-		http.Error(w, "list not found", http.StatusNotFound)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent) // jika query berhasil dan data berhasil dihapus maka akan mengirim response (204 no content)
-}
-
-func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
@@ -176,7 +158,7 @@ func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "UPDATE lists SET status = NOT status WHERE id = ?"
+	query := "DELETE FROM lists WHERE id = ?"
 	result, err := database.DB.Exec(query, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -185,17 +167,21 @@ func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		http.Error(w, "list not found", http.StatusNotFound)
+		http.Error(w, "rows not found", http.StatusNotFound)
 		return
 	}
 
-	var updateList models.List
-	selectQuery := "SELECT id, name_list, status FROM lists WHERE id = ?"
-	err = database.DB.QueryRow(selectQuery, id).Scan(&updateList.ID, &updateList.Name_list, &updateList.Status)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
-	json.NewEncoder(w).Encode(updateList)
+func UpdateListStatus(w http.ResponseWriter, r *http.Request) {
+
+	// Set header response sebagai JSON
+	// Ambil parameter ID dari URL
+	// Konversi ID dari string ke integer
+	// Eksekusi query UPDATE untuk toggle status
+	// Validasi perubahan data
+	// Ambil data terbaru setelah update
+	// Kirim data list yang diupdate sebagai response
+
 }
