@@ -22,7 +22,7 @@ func GetAllList(w http.ResponseWriter, r *http.Request) {
 
 	var lists []models.List
 
-	query := "SELECT id, name_list, status FROM list"
+	query := "SELECT id, name_list, status FROM lists"
 	rows, err := database.DB.Query(query)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -31,15 +31,12 @@ func GetAllList(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var list models.List
-
 		if err := rows.Scan(&list.ID, &list.Name_list, &list.Status); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		lists = append(lists, list)
 	}
-
 	json.NewEncoder(w).Encode(lists)
 }
 
@@ -75,37 +72,43 @@ func GetList(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateList(w http.ResponseWriter, r *http.Request) {
-	// set header dalam format json
+
+	// Set header response sebagai JSON
+	// Decode data JSON dari request body
+	// Validasi input
+	// Eksekusi query INSERT ke database
+	// Ambil ID dari baris yang baru dimasukkan
+	// Kirim data list yang baru dibuat sebagai response
+
 	w.Header().Set("Content-Type", "application/json")
-	// buat variable untuk menyimpan data yang di decode
+
 	var list models.List
-	// decode body
 	if err := json.NewDecoder(r.Body).Decode(&list); err != nil {
-		http.Error(w, "invalid input", http.StatusBadRequest)
+		http.Error(w, "Invalid list", http.StatusBadRequest)
 		return
 	}
 
-	// buat kode query untuk memasukkan data baru ke tabel list
 	query := "INSERT INTO lists (name_list, status) VALUE (?, ?)"
-	// mengeksekusi query dengan parameter yang digunakan
-	result, err := database.DB.Exec(query, list.Name_list, list.Status)
+	result, err := database.DB.Exec(query, &list.Name_list, &list.Status)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// mengembalika ID dari baris yang baru saja dimasukkan
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// menyimpan id yang dimasukkan ke database tadi ke list.id
+
 	list.ID = int(id)
-	// ubah dalam format json dan kirim sebagai response
+
 	json.NewEncoder(w).Encode(list)
+
 }
 
 func UpdateList(w http.ResponseWriter, r *http.Request) {
+
 	// set header sebagai json
 	w.Header().Set("Content-Type", "application/json")
 	// ambil parameter url (id)
