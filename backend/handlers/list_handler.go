@@ -108,39 +108,38 @@ func CreateList(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateList(w http.ResponseWriter, r *http.Request) {
+	// Set header response sebagai JSON
+	// Ambil parameter ID dari URL
+	// Konversi ID dari string ke integer
+	// Decode data JSON dari request body
+	// Validasi input
+	// Eksekusi query UPDATE ke database
+	// Kirim data list yang diupdate sebagai response
 
-	// set header sebagai json
 	w.Header().Set("Content-Type", "application/json")
-	// ambil parameter url (id)
 	params := mux.Vars(r)
-	// konversi id ke int
 	id, err := strconv.Atoi(params["id"])
 	if err != nil {
-		http.Error(w, "Invalid list", http.StatusBadRequest)
+		http.Error(w, "invalid list", http.StatusBadRequest)
 		return
 	}
 
-	// buat variable untuk menampung data yang di decode
-	var UpdateList models.List
-	// decode data
-	if err := json.NewDecoder(r.Body).Decode(&UpdateList); err != nil {
-		http.Error(w, "Invalid list", http.StatusBadRequest)
+	var updateList models.List
+	if err := json.NewDecoder(r.Body).Decode(&updateList); err != nil {
+		http.Error(w, "invalid list", http.StatusBadRequest)
 		return
 	}
 
-	// buat kode query untuk update data yang akan diupdate
-	query := "UPDATE lists SET name_list = ?, status = ? WHERE id = ?"
-	//mengeksekusi query dengan parameter yang digunakan
-	_, err = database.DB.Exec(query, UpdateList.Name_list, UpdateList.Status, id)
+	query := "UPDATE lists SET name_list = ?, status = ? WHERE id = ? "
+	_, err = database.DB.Exec(query, &updateList.Name_list, &updateList.Status, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// memberika id terbaru pada update list
-	UpdateList.ID = id
-	// mengubah updatelist ke dalam json dann mengirimnya sebagai response
-	json.NewEncoder(w).Encode(UpdateList)
+	updateList.ID = id
+
+	json.NewEncoder(w).Encode(updateList)
 }
 
 func DeleteList(w http.ResponseWriter, r *http.Request) {
